@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from pathlib import Path
+import os
 import numpy as np
 import pandas as pd
 import time
@@ -280,9 +281,11 @@ class CellAnalyzer:
         plt.tight_layout()
         return plt.gcf()
     
-def address_to_images(image_directory):
+def address_to_images(image_directory, treatments_to_exclude=[]):
     address_to_images = {}
     for treatment in image_directory.iterdir():
+        if treatment in treatments_to_exclude:
+            continue
         addresses = [f.stem.split('_')[0] for f in list(treatment.glob('*w6.png'))]
         for address in addresses:
             images = [
@@ -298,7 +301,7 @@ def address_to_images(image_directory):
 
 if __name__ == "__main__":
     config = {
-        'use_gpu': False,
+        'use_gpu': True,
         'min_cell_size': 100,
         'min_nucleus_size': 50,
         'min_mitochondria_size': 10,
@@ -312,15 +315,21 @@ if __name__ == "__main__":
     analyzer = CellAnalyzer(config)
     
     
-    image_directory = Path('/home/ubuntu/EFAAR_benchmarking/notebooks/egfr-images/ko')
-    address_to_images = address_to_images(image_directory)
+    #image_directory = Path('/home/ec2-user/egfr-images/ko')
+    image_directory = Path('/home/ec2-user/egfr-images/inhibitors')
+    address_to_images = address_to_images(
+            image_directory, treatments_to_exclude=['EMPTY_control', 'CRISPR_control'])
     
     for address, image_paths in address_to_images.items():
+        results_path = f'data/results-inhibitors/{address}_cell_analysis_results.csv'
+        if os.path.exists(results_path):
+            print(f'We already analyzed {address} {image_paths}, moving on')
+            continue
         print(f'Processing {address}')
         results, cell_masks, nuclei_masks, mito_masks, golgi_masks = analyzer.process_image(image_paths)
         if results is not None:
             # print(results.head())
-            results.to_csv(f'{address}_cell_analysis_results.csv', index=False)
+            results.to_csv(results_path, index=None)
             fig = analyzer.visualize_segmentation(cell_masks, nuclei_masks, mito_masks, golgi_masks)
             fig.savefig(f'{address}_segmentation_visualization.png')
         else:
