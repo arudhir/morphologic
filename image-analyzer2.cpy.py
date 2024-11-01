@@ -56,6 +56,107 @@ class CellAnalyzer:
     def __init__(self, config: Dict):
         self.config = config
 
+    def normalize_channel(self, channel: np.ndarray) -> np.ndarray:
+        """Normalize the intensity of a single image channel to the range [0, 1]."""
+        return rescale_intensity(channel, in_range='image', out_range=(0, 1))
+
+    def convert_to_rgb(self, tensor: np.ndarray, vmax: int = 255) -> np.ndarray:
+        """
+        Converts the 6-channel image tensor to RGB using Recursion's color mapping.
+        
+        Parameters:
+        -----------
+        tensor : np.ndarray
+            Image tensor of shape (height, width, 6)
+        vmax : int
+            Maximum value for scaling
+            
+        Returns:
+        --------
+        np.ndarray : RGB image
+        """
+        colored_channels = []
+        for i in range(6):
+            channel_num = i + 1
+            x = (tensor[:, :, i] / vmax) / \
+                ((RGB_MAP[channel_num]['range'][1] - RGB_MAP[channel_num]['range'][0]) / 255) + \
+                RGB_MAP[channel_num]['range'][0] / 255
+            x = np.clip(x, 0, 1)
+            x_rgb = np.array(
+                np.outer(x, RGB_MAP[channel_num]['rgb']).reshape(tensor.shape[0], tensor.shape[1], 3),
+                dtype=int)
+            colored_channels.append(x_rgb)
+        
+        # Combine all channels
+        combined = np.array(np.array(colored_channels).sum(axis=0), dtype=int)
+        combined = np.clip(combined, 0, 255)
+        return combined
+
+    def segment_nuclei(self, nuclei_channel: np.ndarray) -> np.ndarray:
+        """Segment nuclei using Cellpose."""
+        print("Starting nuclei segmentation...")
+        start_time = time.time()
+        model = models.Cellpose(gpu=self.config['use_gpu'], model_type='nuclei')
+        masks, _, _, _ = model.eval(nuclei_channel, diameter=None, channels=[0, 0])
+        print(f"Nuclei segmentation completed in {time.time() - start_time:.2f} seconds.")
+        return masks
+
+    def analyze_nuclear_morphology(self, nucleus_mask: np.ndarray, dapi_channel: np.ndarray) -> Dict:
+        """Analyze nuclear morphology for cell cycle and health indicators."""
+        features = {}
+        
+        # Ensure proper image type for GLCM calculation
+        # Normalize DAPI channel to 0-255 range and convert to uint8
+        dapi_normalized = ((dapi_channel - dapi_channel.min()) * 255 / 
+                        (dapi_channel.max() - dapi_channel.min())).astype(np.uint8)
+        
+        # Calculate GLCM on the normalized image
+        glcm = feature.graycomatrix(dapi_normalized, 
+                                distances=[1], 
+                                angles=[0, np.pi/4, np.pi/2, 3*np.pi/4],
+                                levels=256,
+                                symmetric=True,
+                                normed=True)
+        
+        features['chromatin_homogeneity'] = feature.graycoprops(glcm, 'homogeneity').mean()
+        features['chromatin_contrast'] = feature.graycoprops(glcm, 'contrast').mean()
+        
+        # Detect mitotic figures using normalized image
+        features['is_mitotic'] = self._detect_mitotic_nucleus(dapi_normalized)
+        
+        # Nuclear irregularity index (using binary mask)
+        if np.any(nucleus_mask):  # Check if mask contains any nuclei
+            props = measure.regionprops(nucleus_mask.astype(int))
+            if props:  # Check if any regions were found
+                prop = props[0]  # Take the first nucleus if multiple exist
+                perimeter = prop.perimeter
+                area = prop.area
+                features['nuclear_irregularity'] = (perimeter ** 2) / (4 * np.pi * area)
+            else:
+                features['nuclear_irregularity'] = np.nan
+        else:
+            features['nuclear_irregularity'] = np.nan
+        
+        # Count nuclei
+        features['nucleus_count'] = len(measure.regionprops(nucleus_mask.astype(int)))
+        
+        return features
+
+    def _detect_mitotic_nucleus(self, dapi_channel: np.ndarray) -> bool:
+        """Detect mitotic nuclei based on condensed chromatin patterns."""
+        # Ensure input is uint8
+        if dapi_channel.dtype != np.uint8:
+            dapi_channel = dapi_channel.astype(np.uint8)
+        
+        # Detect bright spots that might indicate condensed chromatin
+        blobs = feature.blob_log(dapi_channel, 
+                                min_sigma=1,
+                                max_sigma=30,
+                                num_sigma=10,
+                                threshold=.2)
+        
+        # Consider it mitotic if we find more than 2 bright spots
+        return len(blobs) > 2
 
     def _create_network_graph(self, skeleton: np.ndarray) -> nx.Graph:
         """Convert skeleton image to networkx graph for topology analysis."""
@@ -133,7 +234,69 @@ class CellAnalyzer:
         
         return G
 
-
+    def analyze_mitochondrial_network(self, mito_mask: np.ndarray) -> Dict:
+        """Analyze mitochondrial network morphology and distribution."""
+        features = {}
+        
+        try:
+            # Ensure binary mask
+            mito_mask = mito_mask > 0
+            
+            # Skip empty masks
+            if not np.any(mito_mask):
+                return {
+                    'network_branches': 0,
+                    'network_junctions': 0,
+                    'mean_fragment_length': 0,
+                    'fragmentation_index': 0,
+                    'perinuclear_density': 0
+                }
+            
+            # Skeletonize the network
+            skeleton = morphology.skeletonize(mito_mask)
+            
+            # Create network graph
+            graph = self._create_network_graph(skeleton)
+            
+            # Network topology analysis
+            features['network_branches'] = graph.number_of_edges()
+            features['network_junctions'] = len([n for n, d in graph.degree() if d > 2])
+            
+            # Fragment analysis
+            labels = measure.label(mito_mask)
+            regions = measure.regionprops(labels)
+            
+            if regions:
+                # Compute fragment lengths using major axis length
+                lengths = [region.major_axis_length for region in regions]
+                features['mean_fragment_length'] = np.mean(lengths)
+                features['fragmentation_index'] = len(regions) / np.sum(mito_mask)
+            else:
+                features['mean_fragment_length'] = 0
+                features['fragmentation_index'] = 0
+            
+            # Compute perinuclear density (assuming circular region around center)
+            cy, cx = np.array(mito_mask.shape) // 2
+            y, x = np.ogrid[-cy:mito_mask.shape[0]-cy, -cx:mito_mask.shape[1]-cx]
+            dist_from_center = np.sqrt(x*x + y*y)
+            center_mask = dist_from_center <= min(cy, cx) // 3  # Inner third of radius
+            
+            if np.any(center_mask):
+                features['perinuclear_density'] = np.sum(mito_mask & center_mask) / np.sum(center_mask)
+            else:
+                features['perinuclear_density'] = 0
+                
+        except Exception as e:
+            print(f"Error in mitochondrial network analysis: {str(e)}")
+            features = {
+                'network_branches': 0,
+                'network_junctions': 0,
+                'mean_fragment_length': 0,
+                'fragmentation_index': 0,
+                'perinuclear_density': 0
+            }
+        
+        return features
 
     def _compute_golgi_polarization(self, regions: List) -> float:
         """
