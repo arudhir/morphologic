@@ -283,7 +283,7 @@ IdentifyPrimaryObjects:[module_num:14|svn_version:'Unknown'|variable_revision_nu
 
 MeasureObjectSizeShape:[module_num:15|svn_version:'Unknown'|variable_revision_number:3|show_window:True|notes:['Measure size and shape features of all objects']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Select object sets to measure:Cells, Cytoplasm, Nuclei, Nucleoli, GolgiSpots, NucleoliChildObjects
-    Calculate the Zernike features?:Yes
+    Calculate the Zernike features?:No
     Calculate the advanced features?:No
 
 MeasureObjectIntensity:[module_num:16|svn_version:'Unknown'|variable_revision_number:4|show_window:True|notes:['Measure detailed intensity features across all channels']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
