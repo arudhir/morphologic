@@ -295,10 +295,10 @@ MeasureObjectNeighbors:[module_num:17|svn_version:'Unknown'|variable_revision_nu
     Select neighboring objects to measure:Cells
     Method to determine neighbors:Within a specified distance
     Neighbor distance:50
-    Retain the image of objects colored by number of neighbors?:No
+    Retain the image of objects colored by number of neighbors?:Yes
     Name the output image:ObjectNeighborCount
     Select colormap:Default
-    Retain the image of objects colored by percent of touching pixels?:No
+    Retain the image of objects colored by percent of touching pixels?:Yes
     Name the output image:PercentTouching
     Select colormap:Default
 
@@ -331,11 +331,11 @@ OverlayOutlines:[module_num:19|svn_version:'Unknown'|variable_revision_number:4|
     Select outline color:Magenta
     Select objects to display:GolgiSpots
 
-ExportToSpreadsheet:[module_num:20|svn_version:'Unknown'|variable_revision_number:13|show_window:True|notes:['Export all measurements with metadata']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+ExportToSpreadsheet:[module_num:20|svn_version:'Unknown'|variable_revision_number:13|show_window:True|notes:['Export ALL measurements including per-object data']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Select the column delimiter:Comma (",")
     Add image metadata columns to your object data file?:Yes
     Add image file and folder names to your object data file?:No
-    Select the measurements to export:Yes
+    Select the measurements to export:No
     Calculate the per-image mean values for object measurements?:Yes
     Calculate the per-image median values for object measurements?:Yes
     Calculate the per-image standard deviation values for object measurements?:Yes
