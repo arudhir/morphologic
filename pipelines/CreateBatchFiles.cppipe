@@ -1,0 +1,460 @@
+CellProfiler Pipeline: http://www.cellprofiler.org
+Version:5
+DateRevision:428
+GitHash:
+ModuleCount:26
+HasImagePlaneDetails:False
+
+Images:[module_num:1|svn_version:'Unknown'|variable_revision_number:2|show_window:False|notes:['To begin creating your project, use the Images module to compile a list of files and/folders that you want to analyze.']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    :
+    Filter images?:Images only
+    Select the rule criteria:and (extension does contain "png")
+
+Metadata:[module_num:2|svn_version:'Unknown'|variable_revision_number:6|show_window:False|notes:['The Metadata module extracts site and channel information from the filenames']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Extract metadata?:Yes
+    Metadata data type:Choose for each
+    Metadata types:{"Well": "text", "Site": "integer"}
+    Extraction method count:1
+    Metadata extraction method:Extract from file/folder names
+    Metadata source:File name
+    Regular expression to extract from file name:^Plate(?P<Plate>[0-9]+)_(?P<Well>[A-Z]+[0-9]{2})_s(?P<Site>[0-9])_w(?P<WaveForm>[0-9]).png$
+    Regular expression to extract from folder name:(?P<Date>[0-9]{4}_[0-9]{2}_[0-9]{2})$
+    Extract metadata from:All images
+    Select the filtering criteria:and (file does contain "")
+    Metadata file location:None
+    Match file and image metadata:[]
+    Use case insensitive matching?:No
+    Metadata file name:None
+    Does cached metadata exist?:No
+
+NamesAndTypes:[module_num:3|svn_version:'Unknown'|variable_revision_number:8|show_window:False|notes:['Channel assignment:', 'w1: Hoechst 33342 (nucleus)', 'w2: Concanavalin A (membrane glycoproteins)', 'w3: Phalloidin (Actin)', 'w4: Syto14 (RNA)', 'w5: WGA (Golgi)', 'w6: Mitotracker (mitochondria)']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Assign a name to:Images matching rules
+    Select the image type:Grayscale image
+    Name to assign these images:DNA
+    Match metadata:[]
+    Image set matching method:Order
+    Set intensity range from:Image metadata
+    Assignments count:6
+    Single images count:0
+    Maximum intensity:65535
+    Process as 3D?:No
+    Relative pixel spacing in X:0.65
+    Relative pixel spacing in Y:0.65
+    Relative pixel spacing in Z:1.0
+    Select the rule criteria:file does contain "_w1"
+    Name to assign these images:DNA
+    Name to assign these objects:None
+    Select the image type:Grayscale image
+    Set intensity range from:Image metadata
+    Maximum intensity:65535
+    Select the rule criteria:file does contain "_w2"
+    Name to assign these images:ConA
+    Name to assign these objects:None
+    Select the image type:Grayscale image
+    Set intensity range from:Image metadata
+    Maximum intensity:65535
+    Select the rule criteria:file does contain "_w3"
+    Name to assign these images:Actin
+    Name to assign these objects:None
+    Select the image type:Grayscale image
+    Set intensity range from:Image metadata
+    Maximum intensity:65535
+    Select the rule criteria:file does contain "_w4"
+    Name to assign these images:RNA
+    Name to assign these objects:None
+    Select the image type:Grayscale image
+    Set intensity range from:Image metadata
+    Maximum intensity:65535
+    Select the rule criteria:file does contain "_w5"
+    Name to assign these images:WGA
+    Name to assign these objects:None
+    Select the image type:Grayscale image
+    Set intensity range from:Image metadata
+    Maximum intensity:65535
+    Select the rule criteria:file does contain "_w6"
+    Name to assign these images:Mito
+    Name to assign these objects:None
+    Select the image type:Grayscale image
+    Set intensity range from:Image metadata
+    Maximum intensity:65535
+
+Groups:[module_num:4|svn_version:'Unknown'|variable_revision_number:2|show_window:False|notes:['Group by Well and Site to process related images together']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Do you want to group your images?:Yes
+    grouping metadata count:2
+    Metadata category:Well
+    Metadata category:Site
+
+IdentifyPrimaryObjects:[module_num:5|svn_version:'Unknown'|variable_revision_number:15|show_window:False|notes:['Identify nuclei using Hoechst staining']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Select the input image:DNA
+    Name the primary objects to be identified:Nuclei
+    Typical diameter of objects, in pixel units (Min,Max):10,150
+    Discard objects outside the diameter range?:Yes
+    Discard objects touching the border of the image?:Yes
+    Method to distinguish clumped objects:Shape
+    Method to draw dividing lines between clumped objects:Shape
+    Size of smoothing filter:20
+    Suppress local maxima that are closer than this minimum allowed distance:20
+    Speed up by using lower-resolution image to find local maxima?:Yes
+    Fill holes in identified objects?:After declumping only
+    Automatically calculate size of smoothing filter for declumping?:No
+    Automatically calculate minimum allowed distance between local maxima?:No
+    Handling of objects if excessive number of objects identified:Continue
+    Maximum number of objects:500
+    Use advanced settings?:Yes
+    Threshold setting version:12
+    Threshold strategy:Global
+    Thresholding method:Otsu
+    Threshold smoothing scale:1.3488
+    Threshold correction factor:0.9
+    Lower and upper bounds on threshold:0.002,1.0
+    Manual threshold:0.0
+    Select the measurement to threshold with:None
+    Two-class or three-class thresholding?:Three classes
+    Log transform before thresholding?:No
+    Assign pixels in the middle intensity class to the foreground or the background?:Foreground
+    Size of adaptive window:10
+    Lower outlier fraction:0.05
+    Upper outlier fraction:0.05
+    Averaging method:Mean
+    Variance method:Standard deviation
+    # of deviations:2
+    Thresholding method:Otsu
+
+IdentifySecondaryObjects:[module_num:6|svn_version:'Unknown'|variable_revision_number:10|show_window:False|notes:['Identify cell boundaries using membrane staining']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Select the input objects:Nuclei
+    Name the objects to be identified:Cells
+    Select the method to identify the secondary objects:Propagation
+    Select the input image:ConA
+    Number of pixels by which to expand the primary objects:10
+    Regularization factor:0.005
+    Discard secondary objects touching the border of the image?:No
+    Discard the associated primary objects?:No
+    Name the new primary objects:FilteredNuclei
+    Fill holes in identified objects?:Yes
+    Threshold setting version:12
+    Threshold strategy:Global
+    Thresholding method:Otsu
+    Threshold smoothing scale:0
+    Threshold correction factor:0.7
+    Lower and upper bounds on threshold:0.003,1
+    Manual threshold:0.0
+    Select the measurement to threshold with:None
+    Two-class or three-class thresholding?:Three classes
+    Log transform before thresholding?:No
+    Assign pixels in the middle intensity class to the foreground or the background?:Foreground
+    Size of adaptive window:10
+    Lower outlier fraction:0.05
+    Upper outlier fraction:0.05
+    Averaging method:Mean
+    Variance method:Standard deviation
+    # of deviations:2
+    Thresholding method:Otsu
+
+IdentifyTertiaryObjects:[module_num:7|svn_version:'Unknown'|variable_revision_number:3|show_window:False|notes:['Create cytoplasm objects by subtracting nuclei from cells']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Select the larger identified objects:Cells
+    Select the smaller identified objects:Nuclei
+    Name the tertiary objects to be identified:Cytoplasm
+    Shrink smaller object prior to subtraction?:No
+
+EnhanceOrSuppressFeatures:[module_num:8|svn_version:'Unknown'|variable_revision_number:7|show_window:False|notes:['Enhance RNA spots to identify nucleoli']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Select the input image:RNA
+    Name the output image:FilteredRNA
+    Select the operation:Enhance
+    Feature size:10
+    Feature type:Speckles
+    Range of hole sizes:1,10
+    Smoothing scale:2.0
+    Shear angle:0.0
+    Decay:0.95
+    Enhancement method:Tubeness
+    Speed and accuracy:Fast
+    Rescale result image:No
+
+MaskImage:[module_num:9|svn_version:'Unknown'|variable_revision_number:3|show_window:False|notes:['Mask RNA signal to only look within nuclei']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Select the input image:FilteredRNA
+    Name the output image:RNA_in_Nuclei
+    Use objects or an image as a mask?:Objects
+    Select object for mask:Nuclei
+    Select image for mask:None
+    Invert the mask?:No
+
+IdentifyPrimaryObjects:[module_num:10|svn_version:'Unknown'|variable_revision_number:15|show_window:False|notes:['Identify nucleoli from masked RNA signal']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Select the input image:RNA_in_Nuclei
+    Name the primary objects to be identified:Nucleoli
+    Typical diameter of objects, in pixel units (Min,Max):2,15
+    Discard objects outside the diameter range?:Yes
+    Discard objects touching the border of the image?:No
+    Method to distinguish clumped objects:Intensity
+    Method to draw dividing lines between clumped objects:Shape
+    Size of smoothing filter:10
+    Suppress local maxima that are closer than this minimum allowed distance:7.0
+    Speed up by using lower-resolution image to find local maxima?:Yes
+    Fill holes in identified objects?:After both thresholding and declumping
+    Automatically calculate size of smoothing filter for declumping?:Yes
+    Automatically calculate minimum allowed distance between local maxima?:Yes
+    Handling of objects if excessive number of objects identified:Continue
+    Maximum number of objects:500
+    Use advanced settings?:Yes
+    Threshold setting version:12
+    Threshold strategy:Global
+    Thresholding method:Minimum Cross-Entropy
+    Threshold smoothing scale:1.3488
+    Threshold correction factor:1
+    Lower and upper bounds on threshold:0.0,1.0
+    Manual threshold:0.0
+    Select the measurement to threshold with:None
+    Two-class or three-class thresholding?:Three classes
+    Log transform before thresholding?:No
+    Assign pixels in the middle intensity class to the foreground or the background?:Background
+    Size of adaptive window:10
+    Lower outlier fraction:0.05
+    Upper outlier fraction:0.05
+    Averaging method:Mean
+    Variance method:Standard deviation
+    # of deviations:2
+    Thresholding method:Otsu
+
+RelateObjects:[module_num:11|svn_version:'Unknown'|variable_revision_number:5|show_window:False|notes:['Relate nucleoli to their parent nuclei']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Parent objects:Nuclei
+    Child objects:Nucleoli
+    Calculate child-parent distances?:Both
+    Calculate per-parent means for all child measurements?:Yes
+    Calculate distances to other parents?:No
+    Do you want to save the children with parents as a new object set?:Yes
+    Name the output object:NucleoliChildObjects
+    Parent name:None
+
+EnhanceOrSuppressFeatures:[module_num:12|svn_version:'Unknown'|variable_revision_number:7|show_window:False|notes:['Enhance Golgi spots in WGA channel']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Select the input image:WGA
+    Name the output image:EnhancedGolgi
+    Select the operation:Enhance
+    Feature size:10
+    Feature type:Speckles
+    Range of hole sizes:1,10
+    Smoothing scale:2.0
+    Shear angle:0.0
+    Decay:0.95
+    Enhancement method:Tubeness
+    Speed and accuracy:Fast
+    Rescale result image:No
+
+MaskImage:[module_num:13|svn_version:'Unknown'|variable_revision_number:3|show_window:False|notes:['Mask WGA signal to only look within cytoplasm']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Select the input image:EnhancedGolgi
+    Name the output image:Golgi_in_Cytoplasm
+    Use objects or an image as a mask?:Objects
+    Select object for mask:Cytoplasm
+    Select image for mask:None
+    Invert the mask?:No
+
+IdentifyPrimaryObjects:[module_num:14|svn_version:'Unknown'|variable_revision_number:15|show_window:False|notes:['Identify Golgi spots from masked WGA signal']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Select the input image:Golgi_in_Cytoplasm
+    Name the primary objects to be identified:GolgiSpots
+    Typical diameter of objects, in pixel units (Min,Max):2,15
+    Discard objects outside the diameter range?:Yes
+    Discard objects touching the border of the image?:No
+    Method to distinguish clumped objects:Intensity
+    Method to draw dividing lines between clumped objects:Shape
+    Size of smoothing filter:10
+    Suppress local maxima that are closer than this minimum allowed distance:7.0
+    Speed up by using lower-resolution image to find local maxima?:Yes
+    Fill holes in identified objects?:After both thresholding and declumping
+    Automatically calculate size of smoothing filter for declumping?:Yes
+    Automatically calculate minimum allowed distance between local maxima?:Yes
+    Handling of objects if excessive number of objects identified:Continue
+    Maximum number of objects:500
+    Use advanced settings?:Yes
+    Threshold setting version:12
+    Threshold strategy:Global
+    Thresholding method:Minimum Cross-Entropy
+    Threshold smoothing scale:1.3488
+    Threshold correction factor:1
+    Lower and upper bounds on threshold:0.0,1.0
+    Manual threshold:0.0
+    Select the measurement to threshold with:None
+    Two-class or three-class thresholding?:Three classes
+    Log transform before thresholding?:No
+    Assign pixels in the middle intensity class to the foreground or the background?:Background
+    Size of adaptive window:10
+    Lower outlier fraction:0.05
+    Upper outlier fraction:0.05
+    Averaging method:Mean
+    Variance method:Standard deviation
+    # of deviations:2
+    Thresholding method:Otsu
+
+EnhanceOrSuppressFeatures:[module_num:15|svn_version:'Unknown'|variable_revision_number:7|show_window:False|notes:['Enhance mitochondrial structures']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Select the input image:Mito
+    Name the output image:EnhancedMito
+    Select the operation:Enhance
+    Feature size:10
+    Feature type:Neurites
+    Range of hole sizes:1,10
+    Smoothing scale:2.0
+    Shear angle:0.0
+    Decay:0.95
+    Enhancement method:Tubeness
+    Speed and accuracy:Fast
+    Rescale result image:No
+
+MaskImage:[module_num:16|svn_version:'Unknown'|variable_revision_number:3|show_window:False|notes:['Mask mitochondrial signal to cytoplasm']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Select the input image:EnhancedMito
+    Name the output image:Mito_in_Cytoplasm
+    Use objects or an image as a mask?:Objects
+    Select object for mask:Cytoplasm
+    Select image for mask:None
+    Invert the mask?:No
+
+IdentifyPrimaryObjects:[module_num:17|svn_version:'Unknown'|variable_revision_number:15|show_window:False|notes:['Identify mitochondrial structures']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Select the input image:Mito_in_Cytoplasm
+    Name the primary objects to be identified:MitoObjects
+    Typical diameter of objects, in pixel units (Min,Max):3,35
+    Discard objects outside the diameter range?:Yes
+    Discard objects touching the border of the image?:No
+    Method to distinguish clumped objects:Intensity
+    Method to draw dividing lines between clumped objects:Intensity
+    Size of smoothing filter:3.5
+    Suppress local maxima that are closer than this minimum allowed distance:7.0
+    Speed up by using lower-resolution image to find local maxima?:Yes
+    Fill holes in identified objects?:After both thresholding and declumping
+    Automatically calculate size of smoothing filter for declumping?:Yes
+    Automatically calculate minimum allowed distance between local maxima?:Yes
+    Handling of objects if excessive number of objects identified:Continue
+    Maximum number of objects:500
+    Use advanced settings?:Yes
+    Threshold setting version:12
+    Threshold strategy:Global
+    Thresholding method:Otsu
+    Threshold smoothing scale:1.0
+    Threshold correction factor:1.0
+    Lower and upper bounds on threshold:0.0,1.0
+    Manual threshold:0.0
+    Select the measurement to threshold with:None
+    Two-class or three-class thresholding?:Two classes
+    Log transform before thresholding?:No
+    Assign pixels in the middle intensity class to the foreground or the background?:Foreground
+    Size of adaptive window:50
+    Lower outlier fraction:0.05
+    Upper outlier fraction:0.05
+    Averaging method:Mean
+    Variance method:Standard deviation
+    # of deviations:2.0
+    Thresholding method:Otsu
+
+RelateObjects:[module_num:18|svn_version:'Unknown'|variable_revision_number:5|show_window:False|notes:['Relate mitochondria to their parent cells']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Parent objects:Cells
+    Child objects:MitoObjects
+    Calculate child-parent distances?:Both
+    Calculate per-parent means for all child measurements?:Yes
+    Calculate distances to other parents?:No
+    Do you want to save the children with parents as a new object set?:Yes
+    Name the output object:MitoChildObjects
+    Parent name:None
+
+MeasureObjectSizeShape:[module_num:19|svn_version:'Unknown'|variable_revision_number:3|show_window:False|notes:['Measure size and shape features of all objects']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Select object sets to measure:Cells, Cytoplasm, Nuclei, Nucleoli, GolgiSpots, MitoObjects, NucleoliChildObjects, MitoChildObjects
+    Calculate the Zernike features?:No
+    Calculate the advanced features?:No
+
+MeasureObjectIntensity:[module_num:20|svn_version:'Unknown'|variable_revision_number:4|show_window:False|notes:['Measure detailed intensity features across all channels']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Select images to measure:DNA, ConA, Actin, RNA, WGA, Mito
+    Select objects to measure:Cells, Cytoplasm, Nuclei, Nucleoli, GolgiSpots, NucleoliChildObjects
+
+MeasureObjectNeighbors:[module_num:21|svn_version:'Unknown'|variable_revision_number:3|show_window:False|notes:['Analyze spatial relationships between cells']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Select objects to measure:Cells
+    Select neighboring objects to measure:Cells
+    Method to determine neighbors:Within a specified distance
+    Neighbor distance:50
+    Consider objects discarded for touching image border?:Yes
+    Retain the image of objects colored by numbers of neighbors?:ObjectNeighborCount
+    Name the output image:Default
+    Select colormap:Yes
+    Retain the image of objects colored by percent of touching pixels?:PercentTouching
+    Name the output image:Default
+    Select colormap:Oranges
+
+MeasureColocalization:[module_num:22|svn_version:'Unknown'|variable_revision_number:5|show_window:False|notes:['Measure correlation between all channels']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Select images to measure:DNA, ConA, Actin, RNA, WGA, Mito
+    Set threshold as percentage of maximum intensity for the images:15.0
+    Select where to measure correlation:Within objects
+    Select objects to measure:Cells, Cytoplasm, Nuclei, Nucleoli, NucleoliChildObjects
+    Run all metrics?:Yes
+    Calculate correlation and slope metrics?:Yes
+    Calculate the Manders coefficients?:Yes
+    Calculate the Rank Weighted Colocalization coefficients?:Yes
+    Calculate the Overlap coefficients?:Yes
+    Calculate the Manders coefficients using Costes auto threshold?:No
+    Method for Costes thresholding:Fast
+
+OverlayOutlines:[module_num:23|svn_version:'Unknown'|variable_revision_number:4|show_window:False|notes:['Create quality control image showing all segmentation results']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Display outlines on a blank image?:No
+    Select image on which to display outlines:DNA
+    Name the output image:SegmentationOverlay
+    Outline display mode:Color
+    Select method to determine brightness of outlines:Max of image
+    How to outline:Inner
+    Select outline color:Red
+    Select objects to display:Nuclei
+    Select outline color:Yellow
+    Select objects to display:Cells
+    Select outline color:Green
+    Select objects to display:Nucleoli
+    Select outline color:Magenta
+    Select objects to display:GolgiSpots
+    Select outline color:Cyan
+    Select objects to display:MitoObjects
+
+SaveImages:[module_num:24|svn_version:'Unknown'|variable_revision_number:16|show_window:False|notes:['Save the overlay images for quality control']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Select the type of image to save:Image
+    Select the image to save:SegmentationOverlay
+    Select method for constructing file names:From image filename
+    Select image name for file prefix:DNA
+    Enter single file name:OrigBlue
+    Number of digits:4
+    Append a suffix to the image file name?:Yes
+    Text to append to the image name:_overlay
+    Saved file format:tiff
+    Output file location:Default Output Folder sub-folder|overlay_images
+    Image bit depth:8-bit integer
+    Overwrite existing files without warning?:No
+    When to save:Every cycle
+    Record the file and path information to the saved image?:No
+    Create subfolders in the output folder?:No
+    Base image folder:Elsewhere...|
+    How to save the series:T (Time)
+    Save with lossless compression?:Yes
+
+ExportToSpreadsheet:[module_num:25|svn_version:'Unknown'|variable_revision_number:13|show_window:False|notes:['Export ALL measurements including per-object data']|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
+    Select the column delimiter:Comma (",")
+    Add image metadata columns to your object data file?:Yes
+    Add image file and folder names to your object data file?:Yes
+    Select the measurements to export:No
+    Calculate the per-image mean values for object measurements?:Yes
+    Calculate the per-image median values for object measurements?:Yes
+    Calculate the per-image standard deviation values for object measurements?:Yes
+    Output file location:Default Output Folder sub-folder|Plate_\\g<Plate>/Well_\\g<Well>/Site_\\g<Site>
+    Create a GenePattern GCT file?:No
+    Select source of sample row name:Metadata
+    Select the image to use as the identifier:None
+    Select the metadata to use as the identifier:Well
+    Export all measurement types?:Yes
+    Press button to select measurements:
+    Representation of Nan/Inf:NaN
+    Add a prefix to file names?:Yes
+    Filename prefix:Recursion_6Ch_
+    Overwrite existing files without warning?:No
+    Data to export:Do not use
+    Combine these object measurements with those of the previous object?:No
+    File name:DATA.csv
+    Use the object name for the file name?:Yes
+
+CreateBatchFiles:[module_num:26|svn_version:'Unknown'|variable_revision_number:8|show_window:True|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Store batch files in default output folder?:Yes
+    Output folder path:/Volumes/T9/test-cp-output
+    Are the cluster computers running Windows?:No
+    Hidden- in batch mode:No
+    Hidden- in distributed mode:No
+    Hidden- default input folder at time of save:/Users/aru
+    Hidden- revision number:0
+    Hidden- from old matlab:No
+    Local root path:/mnt/data/egfr-images3/EGFR_KO_and_controls/EGFR_KO/gene-081_Plate1_gene-081_1_AE32
+    Cluster root path:/Users/aru/mnt/data/egfr-images3/EGFR_KO_and_controls/EGFR_KO/gene-081_Plate1_gene-081_1_AE32
