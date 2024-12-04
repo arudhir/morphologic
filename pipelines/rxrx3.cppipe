@@ -281,7 +281,17 @@ IdentifyPrimaryObjects:[module_num:14|svn_version:'Unknown'|variable_revision_nu
     # of deviations:2
     Thresholding method:Otsu
 
-EnhanceOrSuppressFeatures:[module_num:15|svn_version:'Unknown'|variable_revision_number:7|show_window:True|notes:['Enhance mitochondrial structures']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+RelateObjects:[module_num:15|svn_version:'Unknown'|variable_revision_number:5|show_window:True|notes:['Relate Golgi spots to their parent cells']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Parent objects:Cells
+    Child objects:GolgiSpots
+    Calculate child-parent distances?:Both
+    Calculate per-parent means for all child measurements?:Yes
+    Calculate distances to other parents?:No
+    Do you want to save the children with parents as a new object set?:Yes
+    Name the output object:GolgiChildObjects
+    Parent name:None
+
+EnhanceOrSuppressFeatures:[module_num:16|svn_version:'Unknown'|variable_revision_number:7|show_window:True|notes:['Enhance mitochondrial structures']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Select the input image:Mito
     Name the output image:EnhancedMito
     Select the operation:Enhance
@@ -295,7 +305,7 @@ EnhanceOrSuppressFeatures:[module_num:15|svn_version:'Unknown'|variable_revision
     Speed and accuracy:Fast
     Rescale result image:No
 
-MaskImage:[module_num:16|svn_version:'Unknown'|variable_revision_number:3|show_window:True|notes:['Mask mitochondrial signal to cytoplasm']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+MaskImage:[module_num:17|svn_version:'Unknown'|variable_revision_number:3|show_window:True|notes:['Mask mitochondrial signal to cytoplasm']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Select the input image:EnhancedMito
     Name the output image:Mito_in_Cytoplasm
     Use objects or an image as a mask?:Objects
@@ -303,7 +313,7 @@ MaskImage:[module_num:16|svn_version:'Unknown'|variable_revision_number:3|show_w
     Select image for mask:None
     Invert the mask?:No
 
-IdentifyPrimaryObjects:[module_num:17|svn_version:'Unknown'|variable_revision_number:15|show_window:True|notes:['Identify mitochondrial structures']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+IdentifyPrimaryObjects:[module_num:18|svn_version:'Unknown'|variable_revision_number:15|show_window:True|notes:['Identify mitochondrial structures']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Select the input image:Mito_in_Cytoplasm
     Name the primary objects to be identified:MitoObjects
     Typical diameter of objects, in pixel units (Min,Max):3,35
@@ -339,7 +349,7 @@ IdentifyPrimaryObjects:[module_num:17|svn_version:'Unknown'|variable_revision_nu
     # of deviations:2.0
     Thresholding method:Otsu
 
-RelateObjects:[module_num:18|svn_version:'Unknown'|variable_revision_number:5|show_window:True|notes:['Relate mitochondria to their parent cells']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+RelateObjects:[module_num:19|svn_version:'Unknown'|variable_revision_number:5|show_window:True|notes:['Relate mitochondria to their parent cells']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Parent objects:Cells
     Child objects:MitoObjects
     Calculate child-parent distances?:Both
@@ -349,16 +359,16 @@ RelateObjects:[module_num:18|svn_version:'Unknown'|variable_revision_number:5|sh
     Name the output object:MitoChildObjects
     Parent name:None
 
-MeasureObjectSizeShape:[module_num:19|svn_version:'Unknown'|variable_revision_number:3|show_window:True|notes:['Measure size and shape features of all objects']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
-    Select object sets to measure:Cells, Cytoplasm, Nuclei, Nucleoli, GolgiSpots, MitoObjects, NucleoliChildObjects, MitoChildObjects
+MeasureObjectSizeShape:[module_num:20|svn_version:'Unknown'|variable_revision_number:3|show_window:True|notes:['Measure size and shape features of all objects']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Select object sets to measure:Cells, Cytoplasm, Nuclei, Nucleoli, GolgiSpots, MitoObjects, NucleoliChildObjects, MitoChildObjects, GolgiChildObjects
     Calculate the Zernike features?:No
     Calculate the advanced features?:No
 
-MeasureObjectIntensity:[module_num:20|svn_version:'Unknown'|variable_revision_number:4|show_window:True|notes:['Measure detailed intensity features across all channels']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+MeasureObjectIntensity:[module_num:21|svn_version:'Unknown'|variable_revision_number:4|show_window:True|notes:['Measure detailed intensity features across all channels']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Select images to measure:DNA, ConA, Actin, RNA, WGA, Mito
-    Select objects to measure:Cells, Cytoplasm, Nuclei, Nucleoli, GolgiSpots, NucleoliChildObjects
+    Select objects to measure:Cells, Cytoplasm, Nuclei, Nucleoli, GolgiSpots, NucleoliChildObjects, GolgiChildObjects
 
-MeasureObjectNeighbors:[module_num:21|svn_version:'Unknown'|variable_revision_number:3|show_window:True|notes:['Analyze spatial relationships between cells']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+MeasureObjectNeighbors:[module_num:22|svn_version:'Unknown'|variable_revision_number:3|show_window:True|notes:['Analyze spatial relationships between cells']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Select objects to measure:Cells
     Select neighboring objects to measure:Cells
     Method to determine neighbors:Within a specified distance
@@ -370,7 +380,7 @@ MeasureObjectNeighbors:[module_num:21|svn_version:'Unknown'|variable_revision_nu
     Name the output image:PercentTouching
     Select colormap:Default
 
-MeasureColocalization:[module_num:22|svn_version:'Unknown'|variable_revision_number:5|show_window:True|notes:['Measure correlation between all channels']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+MeasureColocalization:[module_num:23|svn_version:'Unknown'|variable_revision_number:5|show_window:True|notes:['Measure correlation between all channels']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Select images to measure:DNA, ConA, Actin, RNA, WGA, Mito
     Set threshold as percentage of maximum intensity for the images:15.0
     Select where to measure correlation:Within objects
@@ -383,7 +393,7 @@ MeasureColocalization:[module_num:22|svn_version:'Unknown'|variable_revision_num
     Calculate the Manders coefficients using Costes auto threshold?:No
     Method for Costes thresholding:Fast
 
-OverlayOutlines:[module_num:23|svn_version:'Unknown'|variable_revision_number:4|show_window:True|notes:['Create quality control image showing all segmentation results']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+OverlayOutlines:[module_num:24|svn_version:'Unknown'|variable_revision_number:4|show_window:True|notes:['Create quality control image showing all segmentation results']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Display outlines on a blank image?:No
     Select image on which to display outlines:DNA
     Name the output image:SegmentationOverlay
@@ -401,7 +411,7 @@ OverlayOutlines:[module_num:23|svn_version:'Unknown'|variable_revision_number:4|
     Select outline color:Cyan
     Select objects to display:MitoObjects
 
-SaveImages:[module_num:24|svn_version:'Unknown'|variable_revision_number:16|show_window:True|notes:['Save the overlay images for quality control']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+SaveImages:[module_num:25|svn_version:'Unknown'|variable_revision_number:16|show_window:True|notes:['Save the overlay images for quality control']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Select the type of image to save:Image
     Select the image to save:SegmentationOverlay
     Select method for constructing file names:From image filename
@@ -413,7 +423,7 @@ SaveImages:[module_num:24|svn_version:'Unknown'|variable_revision_number:16|show
     Saved file format:tiff
     Output file location:Default Output Folder sub-folder|overlay_images
     Image bit depth:8-bit integer
-    Overwrite existing files without warning?:No
+    Overwrite existing files without warning?:Yes
     When to save:Every cycle
     Record the file and path information to the saved image?:No
     Create subfolders in the output folder?:No
@@ -421,7 +431,7 @@ SaveImages:[module_num:24|svn_version:'Unknown'|variable_revision_number:16|show
     How to save the series:T (Time)
     Save with lossless compression?:Yes
 
-ExportToSpreadsheet:[module_num:25|svn_version:'Unknown'|variable_revision_number:13|show_window:False|notes:['']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+ExportToSpreadsheet:[module_num:26|svn_version:'Unknown'|variable_revision_number:13|show_window:True|notes:['Export ALL measurements including per-object data']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Select the column delimiter:Comma (",")
     Add image metadata columns to your object data file?:Yes
     Add image file and folder names to your object data file?:No
