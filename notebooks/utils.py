@@ -11,6 +11,12 @@ import pandas as pd
 import scanpy as sc
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.feature_selection import VarianceThreshold, SelectKBest, f_classif
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+import featurewiz
+from harmonypy import run_harmony
 
 def get_crispr_perturbations(adata):
     adata = adata.copy()
@@ -595,3 +601,407 @@ def plot_dose_response(
         handles, labels, title="Controls", loc="upper center", bbox_to_anchor=(0.5, 0.95), ncol=3
     )
     plt.show()
+
+class NaNFilter(BaseEstimator, TransformerMixin):
+    """
+    Remove columns with too many NaN values and replace remaining NaNs or inf/-inf with 0.
+    """
+    def __init__(self, nan_threshold=0.5):
+        self.nan_threshold = nan_threshold
+        self.valid_columns_ = None
+
+    def fit(self, X, y=None):
+        # Treat inf/-inf as NaN for filtering
+        X = np.where(np.isinf(X), np.nan, X)
+
+        # Compute fraction of NaNs per column
+        nan_fraction = np.isnan(X).mean(axis=0)
+        self.valid_columns_ = nan_fraction < self.nan_threshold
+        return self
+
+    def transform(self, X, y=None):
+        # Treat inf/-inf as NaN for transformation
+        X = np.where(np.isinf(X), np.nan, X)
+
+        # Select valid columns and fill remaining NaNs with 0
+        X_filtered = X[:, self.valid_columns_]
+        imputer = SimpleImputer(strategy="constant", fill_value=0)
+        return imputer.fit_transform(X_filtered)
+
+class CorrelationFilter(BaseEstimator, TransformerMixin):
+    """
+    Custom transformer to remove highly correlated features.
+    """
+    def __init__(self, threshold=0.9):
+        self.threshold = threshold
+        self.to_keep_ = None
+
+    def fit(self, X, y=None):
+        # handle both numpy arrays and pandas dataframes
+        if not isinstance(X, pd.DataFrame):
+            X = pd.DataFrame(X)
+        # compute the correlation matrix
+        corr_matrix = X.corr().abs()
+        # identify features to keep
+        upper_triangle = np.triu(np.ones(corr_matrix.shape), k=1).astype(bool)
+        self.to_keep_ = ~corr_matrix.where(upper_triangle).apply(
+            lambda x: any(x > self.threshold), axis=0
+        )
+        return self
+
+    def transform(self, X, y=None):
+        # select features to keep
+        if isinstance(X, np.ndarray):
+            return X[:, self.to_keep_.values]
+        return X.loc[:, self.to_keep_]
+
+
+def create_feature_selection_pipeline(
+    var_threshold=0.01, corr_threshold=0.9, nan_threshold=0.7, k=100
+):
+    """
+    Create a sklearn pipeline for feature selection.
+
+    Parameters:
+        var_threshold (float): Threshold for variance filtering.
+        corr_threshold (float): Threshold for correlation filtering.
+        nan_threshold (float): Maximum fraction of NaNs allowed per column.
+        k (int): Number of features to select with SelectKBest.
+
+    Returns:
+        Pipeline: A sklearn pipeline object.
+    """
+    return Pipeline([
+        ("nan_filter", NaNFilter(nan_threshold=nan_threshold)),
+        ("variance_filter", VarianceThreshold(threshold=var_threshold)),
+        ("correlation_filter", CorrelationFilter(threshold=corr_threshold)),
+        ("select_k_best", SelectKBest(score_func=f_classif, k=k))
+    ])
+
+
+def apply_feature_selection_pipeline(adata, pipeline, target):
+    """
+    Apply a sklearn feature selection pipeline to an AnnData object.
+
+    Parameters:
+        adata (AnnData): Input AnnData object.
+        pipeline (Pipeline): Sklearn feature selection pipeline.
+        target (str): Column name in adata.obs containing target labels.
+
+    Returns:
+        AnnData: New AnnData object with selected features.
+    """
+    # ensure target column exists
+    if target not in adata.obs.columns:
+        raise ValueError(f"Target column '{target}' not found in adata.obs.")
+
+    # extract X (features) and y (labels)
+    X = adata.X
+    y = adata.obs[target].values
+
+    # fit the pipeline and transform X
+    X_selected = pipeline.fit_transform(X, y)
+
+    # handle case where select_k_best might retain fewer features than requested
+    if hasattr(pipeline.named_steps["select_k_best"], "get_support"):
+        selected_features = pipeline.named_steps["select_k_best"].get_support(indices=True)
+    else:
+        selected_features = np.arange(X_selected.shape[1])
+
+    # update adata.var to match selected features
+    selected_var = adata.var.iloc[selected_features].copy()
+
+    # create a new AnnData object with the selected features
+    adata_selected = adata[:, selected_features].copy()
+
+    # update X and var
+    adata_selected.X = X_selected
+    adata_selected.var = selected_var
+
+    return adata_selected
+
+def inspect_features(adata):
+    """
+    Generate a summary table with variance, correlation, and NaN fraction for each feature.
+
+    Parameters:
+        adata (AnnData): Input AnnData object.
+
+    Returns:
+        pd.DataFrame: Table summarizing feature-level statistics.
+    """
+    # compute variance
+    feature_variance = np.nanvar(adata.X, axis=0)
+
+    # compute NaN fraction
+    nan_fraction = np.isnan(adata.X).mean(axis=0)
+
+    # compute absolute correlations
+    corr_matrix = pd.DataFrame(adata.X).corr().abs()
+    upper_triangle = np.triu(np.ones(corr_matrix.shape), k=1).astype(bool)
+    max_corr = corr_matrix.where(upper_triangle).max()
+
+    # combine all metrics into a dataframe
+    feature_summary = pd.DataFrame({
+        "feature_name": adata.var_names,
+        "variance": feature_variance,
+        "nan_fraction": nan_fraction,
+        "max_correlation": max_corr.values
+    })
+
+    # sort by nan_fraction and variance for easier inspection
+    feature_summary = feature_summary.sort_values(by=["nan_fraction", "variance"], ascending=[True, False])
+
+    return feature_summary.reset_index(drop=True)
+
+def filter_var_names_by_pattern(adata, remove_terms):
+    """
+    Filter out var_names in an AnnData object that match any of the specified patterns.
+
+    Parameters:
+        adata (AnnData): Input AnnData object.
+        remove_terms (list): List of substrings to exclude from var_names.
+
+    Returns:
+        AnnData: A new AnnData object with filtered var_names.
+    """
+    import re
+
+    # Create regex pattern from the list of terms
+    pattern = '|'.join(re.escape(term) for term in remove_terms)
+    
+    # Find matching var_names
+    matching_vars = adata.var_names[adata.var_names.str.contains(pattern, na=False)]
+    
+    # Print the number of features removed
+    print(f"Number of features removed: {len(matching_vars)}")
+    
+    # Filter the AnnData object
+    filtered_adata = adata[:, ~adata.var_names.isin(matching_vars)].copy()
+    
+    return filtered_adata
+
+def plot_boxplots_by_group_facet(adata, var_name, group_by, stratify_by, col_wrap=3):
+    """
+    Create subplots for boxplots of a specific feature across groups, stratified by another variable.
+
+    Parameters:
+        adata (AnnData): Input AnnData object.
+        var_name (str): Feature name to plot.
+        group_by (str): Column name in adata.obs to create subplots for each unique value.
+        stratify_by (str): Column name in adata.obs to stratify the boxplot within each subplot.
+        col_wrap (int): Number of columns for subplot grid. Defaults to 2.
+
+    Returns:
+        None
+    """
+    # ensure the grouping column exists
+    if group_by not in adata.obs.columns:
+        raise ValueError(f"'{group_by}' not found in adata.obs.")
+
+    # ensure the stratification column exists
+    if stratify_by not in adata.obs.columns:
+        raise ValueError(f"'{stratify_by}' not found in adata.obs.")
+
+    # ensure the feature exists
+    if var_name not in adata.var_names:
+        raise ValueError(f"'{var_name}' not found in adata.var_names.")
+
+    # create a dataframe with necessary data
+    data = pd.DataFrame({
+        group_by: adata.obs[group_by],
+        stratify_by: adata.obs[stratify_by],
+        var_name: adata[:, var_name].X.flatten(),
+    })
+
+    # create a facet grid for boxplots
+    g = sns.FacetGrid(data, col=group_by, col_wrap=col_wrap, height=4, sharey=True)
+    g.map_dataframe(
+        sns.boxplot,
+        x=stratify_by,
+        y=var_name,
+        palette="Set3",
+        showfliers=False,
+    )
+    g.set_titles(col_template="{col_name}")
+    g.set_axis_labels(stratify_by, var_name)
+    g.fig.suptitle(f"Boxplots of '{var_name}' stratified by '{stratify_by}'", y=1.05)
+    g.tight_layout()
+    plt.show()
+
+from sklearn.manifold import TSNE
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+
+def run_tsne(adata, n_components=2, perplexity=30, learning_rate=200, standardize=True, copy=False, key_added='X_tsne'):
+    """
+    Run t-SNE on an AnnData object.
+
+    Parameters:
+        adata (AnnData): Input AnnData object.
+        n_components (int): Number of dimensions for t-SNE. Defaults to 2.
+        perplexity (float): t-SNE perplexity. Defaults to 30.
+        learning_rate (float): t-SNE learning rate. Defaults to 200.
+        standardize (bool): Whether to standardize the input data before t-SNE. Defaults to True.
+        copy (bool): Whether to return a copy of the AnnData object. Defaults to False.
+        key_added (str): Key under which to save the t-SNE results in `adata.obsm`. Defaults to 'X_tsne'.
+
+    Returns:
+        AnnData: AnnData object with t-SNE results added.
+    """
+    if copy:
+        adata = adata.copy()
+
+    # Handle potential NaNs or infinities
+    X = adata.X.copy()
+    X = np.nan_to_num(X, nan=0, posinf=0, neginf=0)
+
+    # Standardize if required
+    if standardize:
+        scaler = StandardScaler()
+        X = scaler.fit_transform(X)
+
+    # Run t-SNE
+    tsne = TSNE(
+        n_components=n_components, 
+        perplexity=perplexity, 
+        learning_rate=learning_rate, 
+        random_state=42
+    )
+    X_tsne = tsne.fit_transform(X)
+
+    # Store t-SNE results in AnnData
+    adata.obsm[key_added] = X_tsne
+    adata.uns['tsne'] = {
+        'perplexity': perplexity,
+        'learning_rate': learning_rate,
+        'n_components': n_components
+    }
+    return adata
+
+class FeatureWizTransformer(BaseEstimator, TransformerMixin):
+    """
+    Custom transformer to integrate FeatureWiz into a sklearn pipeline.
+
+    Parameters:
+        target (str): Target column name for featurewiz.
+        corr_limit (float): Correlation limit for featurewiz. Defaults to 0.9.
+        verbose (int): Verbosity level for featurewiz. Defaults to 1.
+    """
+    def __init__(self, target, corr_limit=0.9, verbose=0):
+        self.target = target
+        self.corr_limit = corr_limit
+        self.verbose = verbose
+        self.selected_features_ = None
+
+    def fit(self, X, y=None):
+        """
+        Fit the FeatureWizTransformer to the data.
+
+        Parameters:
+            X (pd.DataFrame): Feature data.
+            y (pd.Series or array-like): Target data.
+
+        Returns:
+            self: Fitted transformer.
+        """
+        if isinstance(X, pd.DataFrame):
+            df = X.copy()
+        else:
+            # Convert to DataFrame if X is not already one
+            feature_names = [f"feature_{i}" for i in range(X.shape[1])]
+            df = pd.DataFrame(X, columns=feature_names)
+
+        if y is not None:
+            df[self.target] = y
+        else:
+            raise ValueError("Target values (y) must be provided for FeatureWiz.")
+
+        # Run FeatureWiz
+        self.selected_features_, _ = featurewiz(
+            dataname=df,
+            target=self.target,
+            corr_limit=self.corr_limit,
+            verbose=0
+        )
+        return self
+
+    def transform(self, X):
+        """
+        Transform the data using selected features from FeatureWiz.
+
+        Parameters:
+            X (pd.DataFrame): Input data.
+
+        Returns:
+            pd.DataFrame: Transformed data with selected features.
+        """
+        if self.selected_features_ is None:
+            raise ValueError("The transformer has not been fitted yet. Call fit() before transform().")
+
+        # Select only the features chosen by FeatureWiz
+        return X[self.selected_features_]
+
+    def get_support(self, indices=False):
+        """
+        Get the indices or names of selected features.
+
+        Parameters:
+            indices (bool): Whether to return indices instead of names.
+
+        Returns:
+            list: Selected feature names or indices.
+        """
+        if self.selected_features_ is None:
+            raise ValueError("The transformer has not been fitted yet. Call fit() before get_support().")
+
+        if indices:
+            return [i for i, col in enumerate(self.selected_features_)]
+        return self.selected_features_
+
+def create_featurewiz_pipeline(target_col, corr_limit=0.9, verbose=1):
+    """
+    Create a pipeline with FeatureWiz for feature selection.
+
+    Parameters:
+        target_col (str): Column name for target variable.
+        corr_limit (float): Correlation limit for FeatureWiz. Defaults to 0.9.
+        verbose (int): Verbosity level for FeatureWiz. Defaults to 1.
+
+    Returns:
+        Pipeline: A sklearn pipeline with FeatureWiz.
+    """
+    return Pipeline([
+        ("featurewiz", FeatureWizTransformer(target=target_col, corr_limit=corr_limit, verbose=verbose))
+        ])
+
+def run_harmony_batch_correction(adata, batch_key="batch", vars_use=None, key_added="X_harmony"):
+    """
+    Perform Harmony batch correction on an AnnData object.
+
+    Parameters:
+        adata (AnnData): The input AnnData object.
+        batch_key (str): The column in adata.obs specifying batch information.
+        vars_use (list): List of covariates from adata.obs to use in Harmony correction.
+        key_added (str): Key under adata.obsm to store the corrected matrix.
+
+    Returns:
+        AnnData: The input AnnData object with corrected embeddings stored in adata.obsm[key_added].
+    """
+    adata = adata.copy()
+    if vars_use is None:
+        vars_use = []
+
+    # Run Harmony batch correction
+    harmony_result = run_harmony(
+        np.nan_to_num(adata.X),  # Expression matrix with NaNs handled
+        meta_data=adata.obs,     # Metadata (dataframe)
+        vars_use=vars_use + [batch_key]  # Covariates + batch key
+    )
+
+    # Extract corrected embeddings
+    corrected = harmony_result.Z_corr.T  # Transpose to match AnnData's convention
+    adata.obsm[key_added] = corrected
+
+    return adata
+
